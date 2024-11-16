@@ -1841,6 +1841,15 @@ class WorkflowActionSerializer(serializers.ModelSerializer):
             "remove_view_groups",
             "remove_change_users",
             "remove_change_groups",
+            "email_to",
+            "email_subject",
+            "email_body",
+            "email_include_document",
+            "webhook_url",
+            "webhook_use_params",
+            "webhook_params",
+            "webhook_body",
+            "webhook_headers",
         ]
 
     def validate(self, attrs):
@@ -1877,6 +1886,39 @@ class WorkflowActionSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError(
                         {"assign_title": f'Invalid f-string detected: "{e.args[0]}"'},
                     )
+
+        if "type" in attrs and attrs["type"] == WorkflowAction.WorkflowActionType.EMAIL:
+            if (
+                "email_subject" not in attrs
+                or attrs["email_subject"] is None
+                or len(attrs["email_subject"]) == 0
+                or "email_body" not in attrs
+                or attrs["email_body"] is None
+                or len(attrs["email_body"]) == 0
+            ):
+                raise serializers.ValidationError(
+                    "Email subject and body required",
+                )
+            elif (
+                "email_to" not in attrs
+                or attrs["email_to"] is None
+                or len(attrs["email_to"]) == 0
+            ):
+                raise serializers.ValidationError(
+                    "Email recipient required",
+                )
+
+        if (
+            "type" in attrs
+            and attrs["type"] == WorkflowAction.WorkflowActionType.WEBHOOK
+        ) and (
+            "webhook_url" not in attrs
+            or attrs["webhook_url"] is None
+            or len(attrs["webhook_url"]) == 0
+        ):
+            raise serializers.ValidationError(
+                "Webhook URL required",
+            )
 
         return attrs
 

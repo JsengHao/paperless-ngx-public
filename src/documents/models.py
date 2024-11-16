@@ -1116,6 +1116,14 @@ class WorkflowAction(models.Model):
             2,
             _("Removal"),
         )
+        EMAIL = (
+            3,
+            _("Email"),
+        )
+        WEBHOOK = (
+            4,
+            _("Webhook"),
+        )
 
     type = models.PositiveIntegerField(
         _("Workflow Action Type"),
@@ -1315,6 +1323,79 @@ class WorkflowAction(models.Model):
     remove_all_custom_fields = models.BooleanField(
         default=False,
         verbose_name=_("remove all custom fields"),
+    )
+
+    email_subject = models.CharField(
+        _("email subject"),
+        max_length=256,
+        null=True,
+        blank=True,
+        help_text=_(
+            "The subject of the email, can include some placeholders, "
+            "see documentation.",
+        ),
+    )
+
+    email_body = models.TextField(
+        _("email body"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "The body (message) of the email, can include some placeholders, "
+            "see documentation.",
+        ),
+    )
+
+    email_to = models.TextField(
+        _("emails to"),
+        null=True,
+        blank=True,
+        help_text=_(
+            "The destination email addresses, comma separated.",
+        ),
+    )
+
+    email_include_document = models.BooleanField(
+        default=False,
+        verbose_name=_("include document in email"),
+    )
+
+    webhook_url = models.URLField(
+        _("webhook url"),
+        null=True,
+        blank=True,
+        help_text=_("The destination URL for the notification."),
+    )
+
+    webhook_use_params = models.BooleanField(
+        default=True,
+        verbose_name=_("use parameters"),
+    )
+
+    webhook_params = models.JSONField(
+        _("webhook parameters"),
+        null=True,
+        blank=True,
+        help_text=_("The parameters to send with the webhook URL if body not used."),
+    )
+
+    webhook_body = models.TextField(
+        _("webhook body"),
+        null=True,
+        blank=True,
+        help_text=_("The body to send with the webhook URL if parameters not used."),
+    )
+
+    webhook_headers = models.JSONField(
+        _("webhook headers"),
+        null=True,
+        blank=True,
+        help_text=_("The headers to send with the webhook URL."),
+    )
+
+    webhook_include_document = models.BooleanField(
+        default=False,
+        verbose_name=_("include document in webhook"),
     )
 
     class Meta:

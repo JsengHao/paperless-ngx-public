@@ -1,16 +1,18 @@
 import shutil
 from datetime import timedelta
-from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest import mock
 
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import User
+from django.test import override_settings
 from django.utils import timezone
 from guardian.shortcuts import assign_perm
 from guardian.shortcuts import get_groups_with_perms
 from guardian.shortcuts import get_users_with_perms
 from rest_framework.test import APITestCase
+
+from documents.signals.handlers import run_workflows
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -34,13 +36,17 @@ from documents.signals import document_consumption_finished
 from documents.tests.utils import DirectoriesMixin
 from documents.tests.utils import DummyProgressManager
 from documents.tests.utils import FileSystemAssertsMixin
+from documents.tests.utils import SampleDirMixin
 from paperless_mail.models import MailAccount
 from paperless_mail.models import MailRule
 
 
-class TestWorkflows(DirectoriesMixin, FileSystemAssertsMixin, APITestCase):
-    SAMPLE_DIR = Path(__file__).parent / "samples"
-
+class TestWorkflows(
+    DirectoriesMixin,
+    FileSystemAssertsMixin,
+    SampleDirMixin,
+    APITestCase,
+):
     def setUp(self) -> None:
         self.c = Correspondent.objects.create(name="Correspondent Name")
         self.c2 = Correspondent.objects.create(name="Correspondent Name 2")
@@ -1807,3 +1813,395 @@ class TestWorkflows(DirectoriesMixin, FileSystemAssertsMixin, APITestCase):
         self.assertEqual(doc.owner, self.user2)
         self.assertEqual(doc.tags.all().count(), 1)
         self.assertIn(self.t2, doc.tags.all())
+
+    @override_settings(
+        PAPERLESS_EMAIL_HOST="localhost",
+        EMAIL_ENABLED=True,
+        PAPERLESS_URL="http://localhost:8000",
+    )
+    @mock.patch("httpx.post")
+    @mock.patch("django.core.mail.message.EmailMessage.send")
+    def test_workflow_email_action(self, mock_email_send, mock_post):
+        """
+        GIVEN:
+            - Document updated workflow with email action
+        WHEN:
+            - Document that matches is updated
+        THEN:
+            - email is sent
+        """
+        mock_post.return_value = mock.Mock(
+            status_code=200,
+            json=mock.Mock(return_value={"status": "ok"}),
+        )
+        mock_email_send.return_value = 1
+
+        trigger = WorkflowTrigger.objects.create(
+            type=WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED,
+        )
+        action = WorkflowAction.objects.create(
+            type=WorkflowAction.WorkflowActionType.EMAIL,
+            email_subject="Test Notification: {doc_title}",
+            email_body="Test message: {doc_url}",
+            email_to="user@example.com",
+            email_include_document=False,
+        )
+        w = Workflow.objects.create(
+            name="Workflow 1",
+            order=0,
+        )
+        w.triggers.add(trigger)
+        w.actions.add(action)
+        w.save()
+
+        doc = Document.objects.create(
+            title="sample test",
+            correspondent=self.c,
+            original_filename="sample.pdf",
+        )
+
+        run_workflows(WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED, doc)
+
+        mock_email_send.assert_called_once()
+
+    @override_settings(
+        PAPERLESS_EMAIL_HOST="localhost",
+        EMAIL_ENABLED=True,
+        PAPERLESS_URL="http://localhost:8000",
+    )
+    @mock.patch("httpx.post")
+    @mock.patch("django.core.mail.message.EmailMessage.send")
+    def test_workflow_email_include_file(self, mock_email_send, mock_post):
+        """
+        GIVEN:
+            - Document updated workflow with email action
+            - Include document is set to True
+        WHEN:
+            - Document that matches is updated
+        THEN:
+            - Notification includes document file
+        """
+
+        # move the file
+        test_file = shutil.copy(
+            self.SAMPLE_DIR / "simple.pdf",
+            self.dirs.scratch_dir / "simple.pdf",
+        )
+
+        trigger = WorkflowTrigger.objects.create(
+            type=WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED,
+        )
+        action = WorkflowAction.objects.create(
+            type=WorkflowAction.WorkflowActionType.EMAIL,
+            email_subject="Test Notification: {doc_title}",
+            email_body="Test message: {doc_url}",
+            email_to="me@example.com",
+            email_include_document=True,
+        )
+        w = Workflow.objects.create(
+            name="Workflow 1",
+            order=0,
+        )
+        w.triggers.add(trigger)
+        w.actions.add(action)
+        w.save()
+
+        doc = Document.objects.create(
+            title="sample test",
+            correspondent=self.c,
+            filename=test_file,
+        )
+
+        run_workflows(WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED, doc)
+
+        mock_email_send.assert_called_once()
+
+    @override_settings(
+        EMAIL_ENABLED=False,
+    )
+    def test_workflow_email_action_no_email_setup(self):
+        """
+        GIVEN:
+            - Document updated workflow with email action
+            - Email is not enabled
+        WHEN:
+            - Document that matches is updated
+        THEN:
+            - Error is logged
+        """
+        trigger = WorkflowTrigger.objects.create(
+            type=WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED,
+        )
+        action = WorkflowAction.objects.create(
+            type=WorkflowAction.WorkflowActionType.EMAIL,
+            email_subject="Test Notification: {doc_title}",
+            email_body="Test message: {doc_url}",
+            email_to="me@example.com",
+        )
+        w = Workflow.objects.create(
+            name="Workflow 1",
+            order=0,
+        )
+        w.triggers.add(trigger)
+        w.actions.add(action)
+        w.save()
+
+        doc = Document.objects.create(
+            title="sample test",
+            correspondent=self.c,
+            original_filename="sample.pdf",
+        )
+
+        with self.assertLogs("paperless.handlers", level="ERROR") as cm:
+            run_workflows(WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED, doc)
+
+            expected_str = "Email backend has not been configured"
+            self.assertIn(expected_str, cm.output[0])
+
+    @override_settings(
+        EMAIL_ENABLED=True,
+        PAPERLESS_URL="http://localhost:8000",
+    )
+    @mock.patch("django.core.mail.message.EmailMessage.send")
+    def test_workflow_email_action_fail(self, mock_email_send):
+        """
+        GIVEN:
+            - Document updated workflow with email action
+        WHEN:
+            - Document that matches is updated
+            - An error occurs during email send
+        THEN:
+            - Error is logged
+        """
+        mock_email_send.side_effect = Exception("Error occurred sending email")
+        trigger = WorkflowTrigger.objects.create(
+            type=WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED,
+        )
+        action = WorkflowAction.objects.create(
+            type=WorkflowAction.WorkflowActionType.EMAIL,
+            email_subject="Test Notification: {doc_title}",
+            email_body="Test message: {doc_url}",
+            email_to="me@example.com",
+        )
+        w = Workflow.objects.create(
+            name="Workflow 1",
+            order=0,
+        )
+        w.triggers.add(trigger)
+        w.actions.add(action)
+        w.save()
+
+        doc = Document.objects.create(
+            title="sample test",
+            correspondent=self.c,
+            original_filename="sample.pdf",
+        )
+
+        with self.assertLogs("paperless.handlers", level="ERROR") as cm:
+            run_workflows(WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED, doc)
+
+            expected_str = "Error occurred sending email"
+            self.assertIn(expected_str, cm.output[0])
+
+    @override_settings(
+        PAPERLESS_EMAIL_HOST="localhost",
+        EMAIL_ENABLED=True,
+        PAPERLESS_URL="http://localhost:8000",
+    )
+    @mock.patch("httpx.post")
+    def test_workflow_webhook_action_body(self, mock_post):
+        """
+        GIVEN:
+            - Document updated workflow with webhook action which uses body
+        WHEN:
+            - Document that matches is updated
+        THEN:
+            - Webhook is sent with body
+        """
+        mock_post.return_value = mock.Mock(
+            status_code=200,
+            json=mock.Mock(return_value={"status": "ok"}),
+        )
+
+        trigger = WorkflowTrigger.objects.create(
+            type=WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED,
+        )
+        action = WorkflowAction.objects.create(
+            type=WorkflowAction.WorkflowActionType.WEBHOOK,
+            webhook_use_params=False,
+            webhook_body="Test message: {doc_url}",
+            webhook_url="http://paperless-ngx.com",
+            webhook_include_document=False,
+        )
+        w = Workflow.objects.create(
+            name="Workflow 1",
+            order=0,
+        )
+        w.triggers.add(trigger)
+        w.actions.add(action)
+        w.save()
+
+        doc = Document.objects.create(
+            title="sample test",
+            correspondent=self.c,
+            original_filename="sample.pdf",
+        )
+
+        run_workflows(WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED, doc)
+
+        mock_post.assert_called_once_with(
+            "http://paperless-ngx.com",
+            data=f"Test message: http://localhost:8000/documents/{doc.id}/",
+            headers={},
+        )
+
+    @override_settings(
+        PAPERLESS_EMAIL_HOST="localhost",
+        EMAIL_ENABLED=True,
+        PAPERLESS_URL="http://localhost:8000",
+    )
+    @mock.patch("httpx.post")
+    def test_workflow_webhook_action_w_files(self, mock_post):
+        """
+        GIVEN:
+            - Document updated workflow with webhook action which includes document
+        WHEN:
+            - Document that matches is updated
+        THEN:
+            - Webhook is sent with file
+        """
+        mock_post.return_value = mock.Mock(
+            status_code=200,
+            json=mock.Mock(return_value={"status": "ok"}),
+        )
+
+        trigger = WorkflowTrigger.objects.create(
+            type=WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED,
+        )
+        action = WorkflowAction.objects.create(
+            type=WorkflowAction.WorkflowActionType.WEBHOOK,
+            webhook_use_params=False,
+            webhook_body="Test message: {doc_url}",
+            webhook_url="http://paperless-ngx.com",
+            webhook_include_document=True,
+        )
+        w = Workflow.objects.create(
+            name="Workflow 1",
+            order=0,
+        )
+        w.triggers.add(trigger)
+        w.actions.add(action)
+        w.save()
+
+        test_file = shutil.copy(
+            self.SAMPLE_DIR / "simple.pdf",
+            self.dirs.scratch_dir / "simple.pdf",
+        )
+
+        doc = Document.objects.create(
+            title="sample test",
+            correspondent=self.c,
+            original_filename="simple.pdf",
+            filename=test_file,
+        )
+
+        run_workflows(WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED, doc)
+
+        mock_post.assert_called_once_with(
+            "http://paperless-ngx.com",
+            data=f"Test message: http://localhost:8000/documents/{doc.id}/",
+            files={"file": ("simple.pdf", mock.ANY)},
+            headers={},
+        )
+
+    @override_settings(
+        PAPERLESS_EMAIL_HOST="localhost",
+        EMAIL_ENABLED=True,
+        PAPERLESS_URL="http://localhost:8000",
+    )
+    def test_workflow_webhook_action_fail(self):
+        """
+        GIVEN:
+            - Document updated workflow with webhook action
+        WHEN:
+            - Document that matches is updated
+            - An error occurs during webhook
+        THEN:
+            - Error is logged
+        """
+        trigger = WorkflowTrigger.objects.create(
+            type=WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED,
+        )
+        action = WorkflowAction.objects.create(
+            type=WorkflowAction.WorkflowActionType.WEBHOOK,
+            webhook_use_params=True,
+            webhook_params={
+                "title": "Test webhook: {doc_title}",
+                "body": "Test message: {doc_url}",
+            },
+            webhook_url="http://paperless-ngx.com",
+            webhook_include_document=True,
+        )
+        w = Workflow.objects.create(
+            name="Workflow 1",
+            order=0,
+        )
+        w.triggers.add(trigger)
+        w.actions.add(action)
+        w.save()
+
+        doc = Document.objects.create(
+            title="sample test",
+            correspondent=self.c,
+            original_filename="sample.pdf",
+        )
+
+        # fails because no file
+        with self.assertLogs("paperless.handlers", level="ERROR") as cm:
+            run_workflows(WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED, doc)
+
+            expected_str = "Error occurred sending webhook"
+            self.assertIn(expected_str, cm.output[0])
+
+    @mock.patch("httpx.post")
+    def test_workflow_webhook_action_url_invalid_params_headers(self, mock_post):
+        """
+        GIVEN:
+            - Document updated workflow with webhook action
+            - Invalid params and headers JSON
+        WHEN:
+            - Document that matches is updated
+        THEN:
+            - Error is logged
+        """
+        trigger = WorkflowTrigger.objects.create(
+            type=WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED,
+        )
+        action = WorkflowAction.objects.create(
+            type=WorkflowAction.WorkflowActionType.WEBHOOK,
+            webhook_url="http://paperless-ngx.com",
+            webhook_use_params=True,
+            webhook_params="invalid",
+            webhook_headers="invalid",
+        )
+        w = Workflow.objects.create(
+            name="Workflow 1",
+            order=0,
+        )
+        w.triggers.add(trigger)
+        w.actions.add(action)
+        w.save()
+
+        doc = Document.objects.create(
+            title="sample test",
+            correspondent=self.c,
+            original_filename="sample.pdf",
+        )
+
+        with self.assertLogs("paperless.handlers", level="ERROR") as cm:
+            run_workflows(WorkflowTrigger.WorkflowTriggerType.DOCUMENT_UPDATED, doc)
+
+            expected_str = "Error occurred parsing webhook params"
+            self.assertIn(expected_str, cm.output[0])
+            expected_str = "Error occurred parsing webhook headers"
+            self.assertIn(expected_str, cm.output[1])

@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 
+import httpx
 from celery import states
 from celery.signals import before_task_publish
 from celery.signals import task_failure
@@ -12,6 +13,7 @@ from django.contrib.admin.models import ADDITION
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.core.mail import EmailMessage
 from django.db import DatabaseError
 from django.db import close_old_connections
 from django.db import models
@@ -40,7 +42,7 @@ from documents.models import WorkflowAction
 from documents.models import WorkflowTrigger
 from documents.permissions import get_objects_for_user_owner_aware
 from documents.permissions import set_permissions_for_object
-from documents.templating.title import parse_doc_title_w_placeholders
+from documents.templating.workflows import parse_w_workflow_placeholders
 
 logger = logging.getLogger("paperless.handlers")
 
@@ -608,7 +610,7 @@ def run_workflows(
         if action.assign_title:
             if not use_overrides:
                 try:
-                    document.title = parse_doc_title_w_placeholders(
+                    document.title = parse_w_workflow_placeholders(
                         action.assign_title,
                         document.correspondent.name if document.correspondent else "",
                         document.document_type.name if document.document_type else "",
@@ -865,6 +867,142 @@ def run_workflows(
                 ):
                     overrides.custom_field_ids.remove(field.pk)
 
+    def email_action():
+        if not settings.EMAIL_ENABLED:
+            logger.error(
+                "Email backend has not been configured, cannot send email notifications",
+                extra={"group": logging_group},
+            )
+            return
+
+        title = (
+            document.title
+            if isinstance(document, Document)
+            else str(document.original_file)
+        )
+        doc_url = None
+        if isinstance(document, Document):
+            doc_url = f"{settings.PAPERLESS_URL}/documents/{document.pk}/"
+        subject = parse_w_workflow_placeholders(
+            action.email_subject,
+            document.correspondent.name if document.correspondent else "",
+            document.document_type.name if document.document_type else "",
+            document.owner.username if document.owner else "",
+            timezone.localtime(document.added),
+            document.original_filename or "",
+            timezone.localtime(document.created),
+            title,
+            doc_url,
+        )
+        body = parse_w_workflow_placeholders(
+            action.email_body,
+            document.correspondent.name if document.correspondent else "",
+            document.document_type.name if document.document_type else "",
+            document.owner.username if document.owner else "",
+            timezone.localtime(document.added),
+            document.original_filename or "",
+            timezone.localtime(document.created),
+            title,
+            doc_url,
+        )
+        try:
+            email = EmailMessage(
+                subject=subject,
+                body=body,
+                to=action.email_to.split(","),
+            )
+            if action.email_include_document:
+                email.attach_file(document.source_path)
+            n_messages = email.send()
+            logger.debug(
+                f"Sent {n_messages} notification email(s) to {action.email_to}",
+                extra={"group": logging_group},
+            )
+        except Exception as e:
+            logger.exception(
+                f"Error occurred sending notification email: {e}",
+                extra={"group": logging_group},
+            )
+
+    def webhook_action():
+        title = (
+            document.title
+            if isinstance(document, Document)
+            else str(document.original_file)
+        )
+        doc_url = None
+        if isinstance(document, Document):
+            doc_url = f"{settings.PAPERLESS_URL}/documents/{document.pk}/"
+
+        try:
+            data = {}
+            if action.webhook_use_params:
+                try:
+                    for key, value in action.webhook_params.items():
+                        data[key] = parse_w_workflow_placeholders(
+                            value,
+                            document.correspondent.name
+                            if document.correspondent
+                            else "",
+                            document.document_type.name
+                            if document.document_type
+                            else "",
+                            document.owner.username if document.owner else "",
+                            timezone.localtime(document.added),
+                            document.original_filename or "",
+                            timezone.localtime(document.created),
+                            title,
+                            doc_url,
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Error occurred parsing webhook params: {e}",
+                        extra={"group": logging_group},
+                    )
+            else:
+                data = parse_w_workflow_placeholders(
+                    action.webhook_body,
+                    document.correspondent.name if document.correspondent else "",
+                    document.document_type.name if document.document_type else "",
+                    document.owner.username if document.owner else "",
+                    timezone.localtime(document.added),
+                    document.original_filename or "",
+                    timezone.localtime(document.created),
+                    title,
+                    doc_url,
+                )
+            headers = {}
+            if action.webhook_headers:
+                try:
+                    headers = {
+                        str(k): str(v) for k, v in action.webhook_headers.items()
+                    }
+                except Exception as e:
+                    logger.error(
+                        f"Error occurred parsing webhook headers: {e}",
+                        extra={"group": logging_group},
+                    )
+            if action.webhook_include_document:
+                with open(document.source_path, "rb") as f:
+                    files = {"file": (document.original_filename, f)}
+                    httpx.post(
+                        action.webhook_url,
+                        data=data,
+                        files=files,
+                        headers=headers,
+                    )
+            else:
+                httpx.post(
+                    action.webhook_url,
+                    data=data,
+                    headers=headers,
+                )
+        except Exception as e:
+            logger.exception(
+                f"Error occurred sending webhook: {e}",
+                extra={"group": logging_group},
+            )
+
     use_overrides = overrides is not None
     messages = []
 
@@ -910,6 +1048,10 @@ def run_workflows(
                     assignment_action()
                 elif action.type == WorkflowAction.WorkflowActionType.REMOVAL:
                     removal_action()
+                elif action.type == WorkflowAction.WorkflowActionType.EMAIL:
+                    email_action()
+                elif action.type == WorkflowAction.WorkflowActionType.WEBHOOK:
+                    webhook_action()
 
             if not use_overrides:
                 # save first before setting tags

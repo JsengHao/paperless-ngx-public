@@ -72,6 +72,14 @@ export const WORKFLOW_ACTION_OPTIONS = [
     id: WorkflowActionType.Removal,
     name: $localize`Removal`,
   },
+  {
+    id: WorkflowActionType.Email,
+    name: $localize`Email`,
+  },
+  {
+    id: WorkflowActionType.Webhook,
+    name: $localize`Webhook`,
+  },
 ]
 
 const TRIGGER_MATCHING_ALGORITHMS = MATCHING_ALGORITHMS.filter(
@@ -363,6 +371,18 @@ export class WorkflowEditDialogComponent
         remove_all_custom_fields: new FormControl(
           action.remove_all_custom_fields
         ),
+        email_subject: new FormControl(action.email_subject),
+        email_body: new FormControl(action.email_body),
+        email_to: new FormControl(action.email_to),
+        email_include_document: new FormControl(action.email_include_document),
+        webhook_url: new FormControl(action.webhook_url),
+        webhook_use_params: new FormControl(action.webhook_use_params),
+        webhook_params: new FormControl(action.webhook_params),
+        webhook_body: new FormControl(action.webhook_body),
+        webhook_headers: new FormControl(action.webhook_headers),
+        webhook_include_document: new FormControl(
+          action.webhook_include_document
+        ),
       }),
       { emitEvent }
     )
@@ -455,6 +475,16 @@ export class WorkflowEditDialogComponent
       remove_all_permissions: false,
       remove_custom_fields: [],
       remove_all_custom_fields: false,
+      email_subject: null,
+      email_body: null,
+      email_to: null,
+      email_include_document: false,
+      webhook_url: null,
+      webhook_use_params: true,
+      webhook_params: null,
+      webhook_body: null,
+      webhook_headers: null,
+      webhook_include_document: false,
     }
     this.object.actions.push(action)
     this.createActionField(action)
