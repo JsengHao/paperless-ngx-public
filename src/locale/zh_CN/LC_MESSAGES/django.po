@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: paperless-ngx\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-10-19 22:56-0700\n"
-"PO-Revision-Date: 2024-11-03 04:57\n"
+"PO-Revision-Date: 2024-11-17 12:10\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Language: zh_CN\n"
@@ -23,35 +23,35 @@ msgstr "文档"
 
 #: documents/filters.py:334
 msgid "Value must be valid JSON."
-msgstr ""
+msgstr "值必须是有效的 JSON 格式。"
 
 #: documents/filters.py:353
 msgid "Invalid custom field query expression"
-msgstr ""
+msgstr "无效的自定义字段查询表达式"
 
 #: documents/filters.py:363
 msgid "Invalid expression list. Must be nonempty."
-msgstr ""
+msgstr "无效的表达式列表。必须不为空。"
 
 #: documents/filters.py:384
 msgid "Invalid logical operator {op!r}"
-msgstr ""
+msgstr "无效的逻辑运算符 {op!r}"
 
 #: documents/filters.py:398
 msgid "Maximum number of query conditions exceeded."
-msgstr ""
+msgstr "超出查询条件的最大数量。"
 
 #: documents/filters.py:455
 msgid "{name!r} is not a valid custom field."
-msgstr ""
+msgstr "{name!r} 不是一个有效的自定义字段。"
 
 #: documents/filters.py:492
 msgid "{data_type} does not support query expr {expr!r}."
-msgstr ""
+msgstr "{data_type} 不支持查询表达式 {expr!r}。"
 
 #: documents/filters.py:600
 msgid "Maximum nesting depth exceeded."
-msgstr ""
+msgstr "超出最大嵌套深度。"
 
 #: documents/models.py:41 documents/models.py:802
 msgid "owner"
@@ -192,11 +192,11 @@ msgstr "已归档文档的校验和。"
 
 #: documents/models.py:211
 msgid "page count"
-msgstr ""
+msgstr "页数"
 
 #: documents/models.py:218
 msgid "The number of pages of the document."
-msgstr ""
+msgstr "文档页数。"
 
 #: documents/models.py:222 documents/models.py:402 documents/models.py:722
 #: documents/models.py:760 documents/models.py:831 documents/models.py:889
@@ -353,7 +353,7 @@ msgstr "ASN"
 
 #: documents/models.py:431
 msgid "Pages"
-msgstr ""
+msgstr "页"
 
 #: documents/models.py:437
 msgid "show on dashboard"
@@ -545,23 +545,23 @@ msgstr "由我共享"
 
 #: documents/models.py:521
 msgid "has custom fields"
-msgstr ""
+msgstr "具有自定义字段"
 
 #: documents/models.py:522
 msgid "has custom field in"
-msgstr ""
+msgstr "具有自定义字段在其中"
 
 #: documents/models.py:523
 msgid "does not have custom field in"
-msgstr ""
+msgstr "没有自定义字段在其中"
 
 #: documents/models.py:524
 msgid "does not have custom field"
-msgstr ""
+msgstr "没有自定义字段"
 
 #: documents/models.py:525
 msgid "custom fields query"
-msgstr ""
+msgstr "自定义字段查询"
 
 #: documents/models.py:535
 msgid "rule type"
@@ -1162,7 +1162,7 @@ msgstr "Paperless-ngx 社交媒体账户登录"
 #: documents/templates/socialaccount/authentication_error.html:10
 #, python-format
 msgid "An error occurred while attempting to login via your social network account. Back to the <a href=\"%(login_url)s\">login page</a>"
-msgstr "在尝试通过您的社交网络账户登录时出现了一个错误. 返回 <a href=\"%(login_url)s\">登录页面</a>"
+msgstr "在尝试通过您的社交网络帐户登录时出现了一个错误. 返回 <a href=\"%(login_url)s\">登录页面</a>"
 
 #: documents/templates/socialaccount/login.html:10
 #, python-format
@@ -1455,7 +1455,7 @@ msgstr "俄语"
 
 #: paperless/settings.py:710
 msgid "Slovak"
-msgstr "Slovak 斯洛伐克语"
+msgstr "斯洛伐克语"
 
 #: paperless/settings.py:711
 msgid "Slovenian"
@@ -1475,7 +1475,7 @@ msgstr "土耳其语"
 
 #: paperless/settings.py:715
 msgid "Ukrainian"
-msgstr "Ukrainian 乌克兰语"
+msgstr "乌克兰语"
 
 #: paperless/settings.py:716
 msgid "Chinese Simplified"
@@ -1523,7 +1523,7 @@ msgstr "Paperless-ngx 邮件"
 
 #: paperless_mail/models.py:10
 msgid "mail account"
-msgstr "邮件账号"
+msgstr "邮箱账号"
 
 #: paperless_mail/models.py:11
 msgid "mail accounts"
@@ -1543,15 +1543,15 @@ msgstr "使用 STARTTLS"
 
 #: paperless_mail/models.py:19
 msgid "IMAP"
-msgstr ""
+msgstr "IMAP"
 
 #: paperless_mail/models.py:20
 msgid "Gmail OAuth"
-msgstr ""
+msgstr "Gmail OAuth"
 
 #: paperless_mail/models.py:21
 msgid "Outlook OAuth"
-msgstr ""
+msgstr "Outlook OAuth"
 
 #: paperless_mail/models.py:25
 msgid "IMAP server"
@@ -1591,11 +1591,11 @@ msgstr "与邮件服务器通信时使用的字符集，例如“UTF-8”或“U
 
 #: paperless_mail/models.py:60
 msgid "account type"
-msgstr ""
+msgstr "帐户类型"
 
 #: paperless_mail/models.py:66
 msgid "refresh token"
-msgstr ""
+msgstr "刷新令牌"
 
 #: paperless_mail/models.py:71
 msgid "The refresh token to use for token authentication e.g. with oauth2."
@@ -1679,7 +1679,7 @@ msgstr "使用下面选择的联系人"
 
 #: paperless_mail/models.py:145
 msgid "account"
-msgstr "账户"
+msgstr "帐户"
 
 #: paperless_mail/models.py:151 paperless_mail/models.py:306
 msgid "folder"

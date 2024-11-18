@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: paperless-ngx\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-10-19 22:56-0700\n"
-"PO-Revision-Date: 2024-10-20 05:58\n"
+"PO-Revision-Date: 2024-11-14 12:12\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Language: ko_KR\n"
@@ -23,35 +23,35 @@ msgstr "문서"
 
 #: documents/filters.py:334
 msgid "Value must be valid JSON."
-msgstr ""
+msgstr "값은 유효한 JSON이어야 합니다."
 
 #: documents/filters.py:353
 msgid "Invalid custom field query expression"
-msgstr ""
+msgstr "잘못된 사용자 정의 필드 쿼리 표현식"
 
 #: documents/filters.py:363
 msgid "Invalid expression list. Must be nonempty."
-msgstr ""
+msgstr "잘못된 표현식 목록입니다. 비어 있지 않아야 합니다."
 
 #: documents/filters.py:384
 msgid "Invalid logical operator {op!r}"
-msgstr ""
+msgstr "잘못된 논리 연산자 {op!r}"
 
 #: documents/filters.py:398
 msgid "Maximum number of query conditions exceeded."
-msgstr ""
+msgstr "쿼리 조건의 최대 개수를 초과했습니다."
 
 #: documents/filters.py:455
 msgid "{name!r} is not a valid custom field."
-msgstr ""
+msgstr "{name!r} 은(는) 잘못된 사용자 정의 필드입니다."
 
 #: documents/filters.py:492
 msgid "{data_type} does not support query expr {expr!r}."
-msgstr ""
+msgstr "{data_type}은(는) 쿼리 표현식 {expr!r}을(를) 지원하지 않습니다."
 
 #: documents/filters.py:600
 msgid "Maximum nesting depth exceeded."
-msgstr ""
+msgstr "최대 중첩 깊이를 초과했습니다."
 
 #: documents/models.py:41 documents/models.py:802
 msgid "owner"
@@ -192,11 +192,11 @@ msgstr "보관된 문서의 체크섬"
 
 #: documents/models.py:211
 msgid "page count"
-msgstr ""
+msgstr "페이지 수"
 
 #: documents/models.py:218
 msgid "The number of pages of the document."
-msgstr ""
+msgstr "문서의 페이지 수"
 
 #: documents/models.py:222 documents/models.py:402 documents/models.py:722
 #: documents/models.py:760 documents/models.py:831 documents/models.py:889
@@ -353,7 +353,7 @@ msgstr "ASN"
 
 #: documents/models.py:431
 msgid "Pages"
-msgstr ""
+msgstr "페이지"
 
 #: documents/models.py:437
 msgid "show on dashboard"
@@ -561,7 +561,7 @@ msgstr "사용자 정의 필드가 없습니다."
 
 #: documents/models.py:525
 msgid "custom fields query"
-msgstr ""
+msgstr "사용자 정의 필드 쿼리"
 
 #: documents/models.py:535
 msgid "rule type"
@@ -1419,7 +1419,7 @@ msgstr "일본어"
 
 #: paperless/settings.py:701
 msgid "Korean"
-msgstr ""
+msgstr "한국어"
 
 #: paperless/settings.py:702
 msgid "Luxembourgish"
@@ -1543,15 +1543,15 @@ msgstr "STARTTLS 사용"
 
 #: paperless_mail/models.py:19
 msgid "IMAP"
-msgstr ""
+msgstr "IMAP"
 
 #: paperless_mail/models.py:20
 msgid "Gmail OAuth"
-msgstr ""
+msgstr "Gmail OAuth"
 
 #: paperless_mail/models.py:21
 msgid "Outlook OAuth"
-msgstr ""
+msgstr "Outlook OAuth"
 
 #: paperless_mail/models.py:25
 msgid "IMAP server"
@@ -1591,19 +1591,19 @@ msgstr "메일 서버와 통신할 때 사용할 문자 집합 예: 'UTF-8' 또�
 
 #: paperless_mail/models.py:60
 msgid "account type"
-msgstr ""
+msgstr "계정 유형"
 
 #: paperless_mail/models.py:66
 msgid "refresh token"
-msgstr ""
+msgstr "리프레시 토큰"
 
 #: paperless_mail/models.py:71
 msgid "The refresh token to use for token authentication e.g. with oauth2."
-msgstr ""
+msgstr "Oauth2와 같은 토큰 인증에 사용할 리프레시 토큰."
 
 #: paperless_mail/models.py:80
 msgid "The expiration date of the refresh token. "
-msgstr ""
+msgstr "리프레시 토큰의 만료 날짜. "
 
 #: paperless_mail/models.py:90
 msgid "mail rule"
